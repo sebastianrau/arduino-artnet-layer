@@ -1,0 +1,32 @@
+#######################################
+# Syntax Coloring Map For ArtnetLayer
+#######################################
+
+#######################################
+# Datatypes (KEYWORD1)
+#######################################
+
+NODE_CONFIGURATION_T    KEYWORD1
+ART_NET_UNIVERSE_T      KEYWORD1
+ART_DMX_T               KEYWORD1
+ART_POLL_T              KEYWORD1
+ART_POLL_REPLY_T        KEYWORD1
+PROG_IP_COMMAND_T       KEYWORD1
+ArtnetLayer             KEYWORD1
+
+
+#######################################
+# Methods and Functions (KEYWORD2)
+#######################################
+
+begin	                    KEYWORD2
+begin	                    KEYWORD2
+isConfigCrcValid            KEYWORD2
+ArtnetLayer                 KEYWORD2
+setConfigChangedCallback    KEYWORD2    
+setArtDmxCallback           KEYWORD2    
+getPacketBuffer             KEYWORD2    
+
+#######################################
+# Constants (LITERAL1)
+#######################################
