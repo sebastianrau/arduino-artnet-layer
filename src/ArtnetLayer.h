@@ -1,13 +1,14 @@
-#ifndef ARTNET_WIFI_H
-#define ARTNET_WIFI_H
+#ifndef ARTNET_LAYER_H
+#define ARTNET_LAYER_H
 
 #include <Arduino.h>
 #include "ArtnetProtocolDef.h"
 
-
-
 #if defined(__AVR_ATmega328P__)
 #include <avr/pgmspace.h>
+#define ARTNET_MEMCPY_FROM_PROGMEM memcpy_P
+#else
+#define ARTNET_MEMCPY_FROM_PROGMEM memcpy
 #endif
 
 //FORMAT: MINOR.MAYOR
@@ -28,15 +29,15 @@ typedef struct {
 
 
 const  NODE_CONFIGURATION_T defaultConfig
-#if defined(__AVR_ATmega328P__) 
+#if defined(__AVR_ATmega328P__)
 PROGMEM
 #endif
 = {
   {0x00, 0x00, 0x00, 0x00, 0x00, 0x00},     // mac
-  {192, 168, 0, 7},                       	// IP
+  {192, 168, 0, 7},                         // IP
   {255, 255, 255, 0},                       // SUBNET MASK
-  {0, 0, 0, 0},                             // DNS
   {0, 0, 0, 0},                             // Gateway
+  {0, 0, 0, 0},                             // DNS
   1,                                        // DHCP Enabled
   "WiFi LED BAR\0",                         // Short name
   "WiFi LED BAR unconfigured\0",            // Long Name
@@ -60,10 +61,11 @@ class ArtnetLayer
 
     inline ArtnetLayer(
       void (*udpSend)(uint8_t ip[4], uint16_t port, uint8_t* packetData, size_t len, uint8_t broadcast),
-      void (*networkRestart)(void)) {
-
-      updSendCallback = udpSend;
-      networkRestartCallback = networkRestart;
+      void (*networkRestart)(void))
+      : updSendCallback(udpSend),
+        networkRestartCallback(networkRestart),
+        configChangedCallback(nullptr),
+        artDmxCallback(nullptr) {
     }
     inline void setConfigChangedCallback(void (*fptr)(NODE_CONFIGURATION_T* config)) {
       configChangedCallback = fptr;
@@ -88,7 +90,6 @@ class ArtnetLayer
 
     uint8_t       artnetPacket[ART_NET_BUFFER_SIZE]; //buffer to store incoming data
     unsigned int  pollCounter = 0;                  //must be compatible with sprintf("...%4d...");
-    uint16_t      packetSize = 0;
 
     //Callback FunktionPointer
     void (*updSendCallback)(uint8_t ip[4], uint16_t port, uint8_t* packetData, size_t len, uint8_t broadcast);
@@ -99,7 +100,7 @@ class ArtnetLayer
 
 
     //handle OP Codes
-    void handleArtDmx(uint8_t artnetPacket[ART_NET_BUFFER_SIZE]);
+    void handleArtDmx(uint8_t artnetPacket[ART_NET_BUFFER_SIZE], uint16_t packetSize);
     void handleArtPoll(uint8_t artnetPacket[ART_NET_BUFFER_SIZE]);
     void handleArtIpProg(uint8_t artnetPacket[ART_NET_BUFFER_SIZE]);
     void handleArtAddress(uint8_t artnetPacket[ART_NET_BUFFER_SIZE]);
@@ -115,7 +116,7 @@ class ArtnetLayer
     //internal
     uint32_t  calculateCRC(uint8_t* data, size_t len);
     void   updateConfigCrc();
-  
+
 
 
 };
