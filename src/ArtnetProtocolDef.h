@@ -1,6 +1,8 @@
 #ifndef __ARTNET_PROTOCOL_DEF_H__
 #define __ARTNET_PROTOCOL_DEF_H__
 
+#include <Arduino.h>
+#include <stdint.h>
 
 // UDP specific
 //#define ART_NET_PORT 0x1936
@@ -102,11 +104,11 @@
 
 
 #define ART_ADDRESS_COMMAND_ACNONE                        0x00
-#define ART_ADDRESS_COMMAND_ACCANCEL MERGE                0x01
+#define ART_ADDRESS_COMMAND_ACCANCEL_MERGE                0x01
 #define ART_ADDRESS_COMMAND_ACLEDNORMAL                   0x02
 #define ART_ADDRESS_COMMAND_ACLEDMUTE                     0x03
 #define ART_ADDRESS_COMMAND_ACLEDLOCATE                   0x04
-#define ART_ADDRESS_COMMAND_ACRESETRX FLAGS               0x05
+#define ART_ADDRESS_COMMAND_ACRESETRX_FLAGS               0x05
 #define ART_ADDRESS_COMMAND_ACMERGELTP0                   0x10
 #define ART_ADDRESS_COMMAND_ACMERGELTP1                   0x11
 #define ART_ADDRESS_COMMAND_ACMERGELTP2                   0x12
