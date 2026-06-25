@@ -209,12 +209,16 @@ void onArtUpdSend(uint8_t ip[4], uint16_t port, uint8_t* packetData, size_t len,
 }
 
 void onNetworkRestart() {
+#ifdef SERIAL_DEBUG
   Serial.print("Network Restart:");
+#endif
   int32_t dhcpWaitTime = 2000;   //waiting 5ms * 1000 = 5s
   IPAddress zeroIp((uint32_t)0x00000000);
 
+#ifdef SERIAL_DEBUG
   Serial.print("DHCP Status:");
   Serial.println(artnet.nodeConfig.dhcpEnable);
+#endif  
   if (!WiFi.isConnected()) {
     digitalWrite(PIN_LED, 0);
     ConnectWifi();
