@@ -1,5 +1,27 @@
 #include "ArtnetLayer.h"
 
+static size_t boundedStringLength(const uint8_t* data, size_t maxLen) {
+  size_t len = 0;
+  while (len < maxLen && data[len] != '\0') {
+    len++;
+  }
+  return len;
+}
+
+static void copyPacketString(char* destination, size_t destinationLen, const uint8_t* source, size_t sourceLen) {
+  if (destinationLen == 0) {
+    return;
+  }
+
+  size_t len = boundedStringLength(source, sourceLen);
+  if (len >= destinationLen) {
+    len = destinationLen - 1;
+  }
+
+  memcpy(destination, source, len);
+  destination[len] = '\0';
+}
+
 void ArtnetLayer::begin() {
   restartNetwork();
   sendArtPollReply();
@@ -9,11 +31,11 @@ int32_t ArtnetLayer::read(uint16_t packetSize) {
   uint16_t opcode = 0;
   //uint16_t protoVersion = 0;
 
-  // Has a valid size
-  if (packetSize > 0)
+  // Has a valid size for the Art-Net ID and opcode.
+  if (packetSize >= 10)
   {
     // Check "Art-Net" String
-    for (byte i = 0 ; i < 9 ; i++)
+    for (byte i = 0 ; i < 8 ; i++)
     {
       if (artnetPacket[i] != ART_NET_ID[i]) {
         return 0;
@@ -23,18 +45,30 @@ int32_t ArtnetLayer::read(uint16_t packetSize) {
     //protoVersion = artnetPacket[10] | artnetPacket[11] << 8;
     switch (opcode) {
       case ART_OpDmx:
-        handleArtDmx(artnetPacket);
+        if (packetSize < ART_DMX_DATA_OFFSET) {
+          return -1;
+        }
+        handleArtDmx(artnetPacket, packetSize);
         break;
 
       case ART_OpPoll:
+        if (packetSize < sizeof(ART_POLL_T)) {
+          return -1;
+        }
         handleArtPoll(artnetPacket);
         break;
 
       case ART_OpIpProg:
+        if (packetSize < sizeof(ART_PROG_IP_T)) {
+          return -1;
+        }
         handleArtIpProg(artnetPacket);
         break;
 
       case ART_OpAddress:
+        if (packetSize < sizeof(ART_ADDRESS_T)) {
+          return -1;
+        }
         handleArtAddress(artnetPacket);
         break;
 
@@ -45,15 +79,19 @@ int32_t ArtnetLayer::read(uint16_t packetSize) {
   return opcode;
 }
 
-void ArtnetLayer::handleArtDmx(uint8_t data[ART_NET_BUFFER_SIZE]) {
+void ArtnetLayer::handleArtDmx(uint8_t data[ART_NET_BUFFER_SIZE], uint16_t packetSize) {
 
   //TODO handle sequence numbers
 
   ART_DMX_T* packetData = (ART_DMX_T*)data;
+  uint16_t len = (((uint16_t)packetData->lengthH << 8) | packetData->lengthL);
+
+  if (len > 512 || packetSize < (ART_DMX_DATA_OFFSET + len)) {
+    return;
+  }
 
   if ( packetData->universe.universe16 == nodeConfig.select_universe.universe16) {
     if (artDmxCallback) {
-		uint16_t len = (((uint16_t)packetData->lengthH	<< 8) | packetData->lengthL);
       (*artDmxCallback)(packetData->data, len, packetData->sequence);
     }
   }
@@ -67,8 +105,6 @@ void ArtnetLayer::handleArtPoll(uint8_t artnetPacket[ART_NET_BUFFER_SIZE]) {
 }
 
 void ArtnetLayer::handleArtIpProg(uint8_t data[ART_NET_BUFFER_SIZE]) {
-
-  Serial.println("Network Config received");
   ART_PROG_IP_T* artnetPacket = (ART_PROG_IP_T*)data;
 
   uint8_t restartEthernet = 0;
@@ -124,12 +160,14 @@ void ArtnetLayer::handleArtAddress(uint8_t data[ART_NET_BUFFER_SIZE]) {
     nodeConfig.select_universe.universe    =  artnetPacket->swIn[0];
   }
 
-  if (strlen((char*)(artnetPacket->shortName)) > 0) {
-    strcpy(nodeConfig.shortName, (char*)artnetPacket->shortName );
+  if (boundedStringLength(artnetPacket->shortName, sizeof(artnetPacket->shortName)) > 0) {
+    copyPacketString(nodeConfig.shortName, sizeof(nodeConfig.shortName),
+                     artnetPacket->shortName, sizeof(artnetPacket->shortName));
   }
 
-  if (strlen((char*)(artnetPacket->longName)) > 0) {
-    strcpy(nodeConfig.longName, (char*)artnetPacket->longName );
+  if (boundedStringLength(artnetPacket->longName, sizeof(artnetPacket->longName)) > 0) {
+    copyPacketString(nodeConfig.longName, sizeof(nodeConfig.longName),
+                     artnetPacket->longName, sizeof(artnetPacket->longName));
   }
   sendArtPollReply();
   configChanged();
@@ -161,8 +199,10 @@ void ArtnetLayer::sendArtPollReply() {
 
   memcpy(reply.ip,  nodeConfig.ip, 4);
   memcpy(reply.mac, nodeConfig.mac, 6);
-  strcpy((char*)reply.shortname, nodeConfig.shortName );
-  strcpy((char*)reply.longname, nodeConfig.longName );
+  copyPacketString((char*)reply.shortname, sizeof(reply.shortname),
+                   (uint8_t*)nodeConfig.shortName, sizeof(nodeConfig.shortName));
+  copyPacketString((char*)reply.longname, sizeof(reply.longname),
+                   (uint8_t*)nodeConfig.longName, sizeof(nodeConfig.longName));
 
   reply.numbportsH   = 0;          //One Channel
   reply.numbportsL   = 1;          //One Channel
@@ -249,4 +289,3 @@ uint8_t ArtnetLayer::isConfigCrcValid(){
   uint32_t crc_value = calculateCRC((uint8_t*)&nodeConfig, sizeof(NODE_CONFIGURATION_T) - 4 ); //excluding the CRC field
   return (crc_value == nodeConfig.crc32);
 }
-

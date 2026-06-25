@@ -64,6 +64,8 @@ class ArtnetLayer
 
       updSendCallback = udpSend;
       networkRestartCallback = networkRestart;
+      configChangedCallback = nullptr;
+      artDmxCallback = nullptr;
     }
     inline void setConfigChangedCallback(void (*fptr)(NODE_CONFIGURATION_T* config)) {
       configChangedCallback = fptr;
@@ -99,7 +101,7 @@ class ArtnetLayer
 
 
     //handle OP Codes
-    void handleArtDmx(uint8_t artnetPacket[ART_NET_BUFFER_SIZE]);
+    void handleArtDmx(uint8_t artnetPacket[ART_NET_BUFFER_SIZE], uint16_t packetSize);
     void handleArtPoll(uint8_t artnetPacket[ART_NET_BUFFER_SIZE]);
     void handleArtIpProg(uint8_t artnetPacket[ART_NET_BUFFER_SIZE]);
     void handleArtAddress(uint8_t artnetPacket[ART_NET_BUFFER_SIZE]);
